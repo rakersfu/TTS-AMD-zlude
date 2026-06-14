@@ -1,42 +1,72 @@
-🟩 1. 克隆项目代码
-在命令行（CMD 或 PowerShell）执行：
+# VoxCPM 使用说明
 
-bash
+本指南基于 OpenBMB 的 VoxCPM 项目，说明如何在本地克隆、安装依赖并启动服务（推荐 Python 3.9+）。
+
+> 参考仓库：https://github.com/OpenBMB/VoxCPM
+
+---
+
+## 1. 克隆项目代码
+在命令行（CMD、PowerShell、Terminal）中执行：
+
+```bash
 git clone https://github.com/OpenBMB/VoxCPM.git
 cd VoxCPM
-🟦 2. 创建并激活虚拟环境
-建议使用 Python 3.9+。
+```
 
-Windows
-bash
+---
+
+## 2. 创建并激活虚拟环境（推荐）
+建议使用 Python 3.9 及以上版本。
+
+Windows:
+
+```bash
 python -m venv venv
+# 激活 venv
 .\venv\Scripts\activate
-Linux / macOS
-bash
+```
+
+Linux / macOS:
+
+```bash
 python3 -m venv venv
+# 激活 venv
 source venv/bin/activate
-激活后命令行前缀会变成 (venv)，表示你已经进入虚拟环境。
+```
 
-🟧 3. 安装依赖（开发模式）
-在虚拟环境中执行：
+激活虚拟环境后，命令行前缀通常会变成 `(venv)`，表示已进入虚拟环境。
 
-bash
+---
+
+## 3. 安装依赖（开发模式）
+在已激活的虚拟环境中执行：
+
+```bash
 pip install -e .
--e 参数表示 editable mode，源码修改后无需重新安装即可生效。
+```
 
-🟩 4. 启动 VoxCPM
-运行以下命令启动应用，并指定端口为 8808：
+说明：`-e`（editable）模式下，修改源码后无需重新安装即可生效，适合开发调试。
 
-bash
+---
+
+## 4. 启动 VoxCPM
+运行以下命令启动应用，并指定端口（示例使用 8808）：
+
+```bash
 python app.py --port 8808
-启动后，在浏览器访问：
+```
 
-Code
+启动成功后，可以在浏览器访问：
+
 http://127.0.0.1:8808
-🟦 5. 可选：一键启动脚本（Windows）
-如果你想双击运行，可以在项目目录下创建 start_voxcpm.bat，内容如下：
 
-bat
+---
+
+## 5. 可选：Windows 下的一键启动脚本（start_voxcpm.bat）
+如果希望通过双击启动，可以在项目根目录创建一个批处理脚本 `start_voxcpm.bat`，示例内容如下：
+
+```bat
 @echo off
 chcp 65001 >nul
 
@@ -74,15 +104,29 @@ call "%BASEDIR%venv\Scripts\activate.bat"
 python app.py --port 8808
 
 pause
-📌 总结
-完整流程就是：
+```
 
-克隆项目
+将以上内容保存为 `start_voxcpm.bat` 后，双击即可启动（会要求确认路径并检查 venv）。
 
-创建虚拟环境
+---
 
-激活虚拟环境
+## 常见注意事项
 
-安装依赖
+- 请确保 Python 与相关依赖的版本兼容，推荐 Python 3.9+。
+- 如需使用 GPU 或特定后端，请参考 OpenBMB/VoxCPM 官方仓库的运行与依赖说明。
+- 若在安装或运行过程中遇到权限或依赖问题，可尝试：
+  - 在 Windows 上以管理员身份运行终端；
+  - 使用 `python -m pip install --upgrade pip` 更新 pip 后重试；
+  - 查看并安装系统层依赖（如 libsndfile、ffmpeg 等，视项目需求）。
 
-启动应用
+---
+
+## 总结
+完整的本地运行流程：
+
+1. 克隆项目
+2. 创建并激活虚拟环境
+3. 安装依赖（推荐开发模式 `pip install -e .`）
+4. 启动应用并访问 http://127.0.0.1:8808
+
+如果你希望我也把 `start_voxcpm.bat` 文件添加到仓库中，请告诉我，我可以一并提交。
