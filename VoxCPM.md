@@ -70,7 +70,7 @@ http://127.0.0.1:8808
 @echo off
 chcp 65001 >nul
 
-:: 获取当前目录
+:: Get current directory
 set "BASEDIR=%~dp0"
 cd /d "%BASEDIR%"
 
@@ -78,32 +78,41 @@ echo -----------------------------------------------------------------------
 echo     * VoxCPM Starter (with venv check) *
 echo -----------------------------------------------------------------------
 echo.
-echo 当前脚本目录：
+echo Current script directory:
 echo %BASEDIR%
 echo.
 
-:: 确认路径
-set /p CONFIRM="请确认以上路径是否正确 (Y/N)："
+:: Confirm path
+set /p CONFIRM="Is the above path correct? (Y/N): "
 if /I "%CONFIRM%" NEQ "Y" (
-    echo 已取消操作，请检查路径后重新运行。
+    echo Operation cancelled. Please check the path and run again.
     pause
     exit /b
 )
 
-:: 检查 venv
+echo.
+echo Checking venv...
 if not exist "%BASEDIR%venv\Scripts\python.exe" (
-    echo ❌ 未找到 venv，请先执行: python -m venv venv
+    echo ERROR: venv not found. Please create it first:
+    echo     python -m venv venv
     pause
     exit /b
 )
+echo venv found.
+echo.
 
-:: 激活 venv
+:: Activate venv
 call "%BASEDIR%venv\Scripts\activate.bat"
 
-:: 启动 VoxCPM
+echo Current Python path:
+where python
+echo.
+
+:: Start VoxCPM
 python app.py --port 8808
 
 pause
+
 ```
 
 将以上内容保存为 `start_voxcpm.bat` 后，双击即可启动（会要求确认路径并检查 venv）。
