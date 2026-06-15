@@ -73,10 +73,11 @@ pip install gradio
 2. 运行 WebUI
 在项目根目录创建 webui.py，内容如下：
 
-python
+
 import gradio as gr
 import subprocess
 import os
+import shutil
 
 WHISPER_BIN = r"F:/whisper.cpp/build/bin/Release/whisper-cli.exe"
 MODEL_DIR = r"F:/whisper.cpp/models"
@@ -102,22 +103,44 @@ def transcribe(audio_files, model_name, output_format):
         audio_files = [audio_files]
 
     for audio_file in audio_files:
+        base_name = os.path.basename(audio_file)
+        output_file = os.path.join(OUTPUT_DIR, base_name + "." + output_format)
+        cmd = [WHISPER_BIN, "-m", model_path, "-f", audio_file]
+
         try:
-            base_name = os.path.basename(audio_file)
-            output_file = os.path.join(OUTPUT_DIR, base_name + "." + output_format)
-            cmd = [WHISPER_BIN, "-m", model_path, "-f", audio_file]
-            if output_format == "srt":
-                cmd.append("--output-srt")
-            elif output_format == "vtt":
-                cmd.append("--output-vtt")
-            subprocess.run(cmd, check=True)
-            if os.path.exists(output_file):
-                with open(output_file, "r", encoding="utf-8") as f:
-                    results.append(f"文件 {base_name} 转录结果:\n" + f.read())
+            if output_format == "txt":
+                # 捕获 stdout，避免 GBK 解码错误
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="ignore"
+                )
+                output_text = result.stdout if result.stdout else "转录失败，未捕获到输出"
+                results.append(f"文件 {base_name} 转录结果:\n" + output_text)
             else:
-                results.append(f"文件 {base_name} 转录失败，未生成输出文件。")
+                # srt/vtt 模式，生成文件
+                if output_format == "srt":
+                    cmd.append("--output-srt")
+                elif output_format == "vtt":
+                    cmd.append("--output-vtt")
+
+                subprocess.run(cmd, check=True)
+
+                # whisper-cli.exe 会在音频目录生成文件
+                temp_output = audio_file + "." + output_format
+
+                if os.path.exists(temp_output):
+                    shutil.move(temp_output, output_file)
+                    with open(output_file, "r", encoding="utf-8") as f:
+                        results.append(f"文件 {base_name} 转录结果:\n" + f.read())
+                else:
+                    results.append(f"文件 {base_name} 转录失败，未生成输出文件。")
+
         except subprocess.CalledProcessError as e:
             results.append(f"文件 {base_name} 转录失败，错误信息: {e}")
+
     return "\n\n".join(results)
 
 iface = gr.Interface(
@@ -133,6 +156,8 @@ iface = gr.Interface(
 )
 
 iface.launch(server_name="0.0.0.0", server_port=7860)
+
+
 运行：
 
 bat
