@@ -118,24 +118,24 @@ MODELS = [f for f in os.listdir(MODEL_DIR) if f.startswith("ggml") and f.endswit
 if not MODELS:
     MODELS = ["(未找到 ggml 模型，请检查 models 文件夹)"]
 
-def transcribe(audio_files, model_name, output_format, language):
+def transcribe(files, model_name, output_format, language):
     results = []
     model_path = os.path.join(MODEL_DIR, model_name)
     if not os.path.exists(model_path):
         return f"模型文件不存在: {model_path}"
 
-    if not isinstance(audio_files, list):
-        audio_files = [audio_files]
+    if not isinstance(files, list):
+        files = [files]
 
-    for audio_file in audio_files:
-        base_name = os.path.basename(audio_file)
+    for file in files:
+        base_name = os.path.basename(file)
         temp_wav = os.path.join(OUTPUT_DIR, base_name + "_converted.wav")
         output_file = os.path.join(OUTPUT_DIR, base_name + "." + output_format)
 
-        # 自动转码：用 ffmpeg 转成 16kHz wav
+        # 自动转码：无论是音频还是视频，都转成 16kHz wav
         try:
             subprocess.run(
-                ["ffmpeg", "-y", "-i", audio_file, "-ar", "16000", "-ac", "1", temp_wav],
+                ["ffmpeg", "-y", "-i", file, "-ar", "16000", "-ac", "1", temp_wav],
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
@@ -158,7 +158,6 @@ def transcribe(audio_files, model_name, output_format, language):
                 output_text = result.stdout if result.stdout else "转录失败，未捕获到输出"
                 results.append(f"文件 {base_name} 转录结果:\n" + output_text)
 
-                # 保存到 outputs 文件夹
                 with open(output_file, "w", encoding="utf-8") as f:
                     f.write(output_text)
 
@@ -170,11 +169,9 @@ def transcribe(audio_files, model_name, output_format, language):
 
                 subprocess.run(cmd, check=True)
 
-                # whisper-cli.exe 会在临时 wav 同目录生成文件
                 temp_output = temp_wav + "." + output_format
 
                 if os.path.exists(temp_output):
-                    # 读取 Whisper 输出内容，然后写入最终文件
                     with open(temp_output, "r", encoding="utf-8") as f:
                         text = f.read()
 
@@ -182,8 +179,6 @@ def transcribe(audio_files, model_name, output_format, language):
                         f.write(text)
 
                     results.append(f"文件 {base_name} 转录结果:\n" + text)
-
-                    # 删除临时文件，避免重复
                     os.remove(temp_output)
                 else:
                     results.append(f"文件 {base_name} 转录失败，未生成输出文件。")
@@ -191,7 +186,6 @@ def transcribe(audio_files, model_name, output_format, language):
         except subprocess.CalledProcessError as e:
             results.append(f"文件 {base_name} 转录失败，错误信息: {e}")
 
-        # 清理临时 wav
         if os.path.exists(temp_wav):
             os.remove(temp_wav)
 
@@ -200,17 +194,18 @@ def transcribe(audio_files, model_name, output_format, language):
 iface = gr.Interface(
     fn=transcribe,
     inputs=[
-        gr.File(type="filepath", label="上传音频文件（可多选）", file_types=["audio"], file_count="multiple"),
+        gr.File(type="filepath", label="上传音频/视频文件（可多选）", file_types=["audio", "video"], file_count="multiple"),
         gr.Dropdown(MODELS, value=MODELS[0], label="选择模型"),
         gr.Radio(["txt", "srt", "vtt"], value="txt", label="输出格式"),
         gr.Textbox(value="zh", label="语言代码 (如 en, zh, ja, fr)")
     ],
     outputs="text",
     title="Whisper.cpp WebUI",
-    description="上传音频，自动转码为16kHz WAV，只加载 ggml 模型，选择语言，生成转录或字幕（支持批量处理）"
+    description="上传音频或视频，自动提取音频并转码为16kHz WAV，只加载 ggml 模型，选择语言，生成转录或字幕（支持批量处理）"
 )
 
 iface.launch(server_name="0.0.0.0", server_port=7860)
+
 
 
 ```
@@ -237,6 +232,8 @@ http://127.0.0.1:7860
 - 编译 whisper.cpp（启用 Vulkan）得到 `whisper-cli.exe`。
 - 下载所需 ggml 模型到 `models` 目录。
 - 可通过命令行或上面的 Gradio WebUI 进行转录与字幕生成。
-- 运行 WebUI，支持自动转码、多语音、批量处理，结果保存到 outputs
+- 运行 WebUI，支持自动转码、多语音、批量处理，结果保存到 outputs。
+- 支持视频文件：上传 mp4/mkv/avi 时，自动用 ffmpeg 提取音轨。
+- 统一处理：无论音频还是视频，都会转成 16kHz wav，再交给 Whisper。
 
 
