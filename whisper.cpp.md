@@ -101,47 +101,53 @@ curl -L -o ggml-large-v1.bin https://huggingface.co/ggerganov/whisper.cpp/resolv
 下面给出一个简单的 Gradio WebUI 示例（将项目根目录下创建 `webui.py`）：
 
 ```python
-# webui.py
+
 import gradio as gr
 import subprocess
 import os
 import shutil
 
-# 根据你的安装位置修改下面的路径
 WHISPER_BIN = r"F:/whisper.cpp/build/bin/Release/whisper-cli.exe"
 MODEL_DIR = r"F:/whisper.cpp/models"
 OUTPUT_DIR = r"F:/whisper.cpp/outputs"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-MODELS = [
-    "ggml-tiny.en.bin",
-    "ggml-base.en.bin",
-    "ggml-small.en.bin",
-    "ggml-medium.en.bin",
-    "ggml-large-v3.bin"
-]
+# 只加载 ggml 开头的模型
+MODELS = [f for f in os.listdir(MODEL_DIR) if f.startswith("ggml") and f.endswith(".bin")]
+if not MODELS:
+    MODELS = ["(未找到 ggml 模型，请检查 models 文件夹)"]
 
-
-def transcribe(audio_files, model_name, output_format):
-    """对单个或多个音频文件进行转录，支持 txt/srt/vtt 输出。"""
+def transcribe(audio_files, model_name, output_format, language):
     results = []
     model_path = os.path.join(MODEL_DIR, model_name)
     if not os.path.exists(model_path):
         return f"模型文件不存在: {model_path}"
 
-    # 单文件或多文件统一处理
     if not isinstance(audio_files, list):
         audio_files = [audio_files]
 
     for audio_file in audio_files:
         base_name = os.path.basename(audio_file)
+        temp_wav = os.path.join(OUTPUT_DIR, base_name + "_converted.wav")
         output_file = os.path.join(OUTPUT_DIR, base_name + "." + output_format)
-        cmd = [WHISPER_BIN, "-m", model_path, "-f", audio_file]
+
+        # 自动转码：用 ffmpeg 转成 16kHz wav
+        try:
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", audio_file, "-ar", "16000", "-ac", "1", temp_wav],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        except Exception as e:
+            results.append(f"文件 {base_name} 转码失败: {e}")
+            continue
+
+        cmd = [WHISPER_BIN, "-m", model_path, "-f", temp_wav, "-l", language]
 
         try:
             if output_format == "txt":
-                # 捕获 stdout，避免平台默认编码导致的解码错误
                 result = subprocess.run(
                     cmd,
                     capture_output=True,
@@ -157,7 +163,6 @@ def transcribe(audio_files, model_name, output_format):
                     f.write(output_text)
 
             else:
-                # srt/vtt 模式，追加对应参数并执行
                 if output_format == "srt":
                     cmd.append("--output-srt")
                 elif output_format == "vtt":
@@ -165,8 +170,8 @@ def transcribe(audio_files, model_name, output_format):
 
                 subprocess.run(cmd, check=True)
 
-                # whisper-cli.exe 会在音频目录生成文件（audio_file + .srt/.vtt）
-                temp_output = audio_file + "." + output_format
+                # whisper-cli.exe 会在临时 wav 所在目录生成文件
+                temp_output = temp_wav + "." + output_format
 
                 if os.path.exists(temp_output):
                     shutil.copy(temp_output, output_file)
@@ -178,22 +183,29 @@ def transcribe(audio_files, model_name, output_format):
         except subprocess.CalledProcessError as e:
             results.append(f"文件 {base_name} 转录失败，错误信息: {e}")
 
-    return "\n\n".join(results)
+        # 清理临时 wav
+        if os.path.exists(temp_wav):
+            os.remove(temp_wav)
 
+    return "\n\n".join(results)
 
 iface = gr.Interface(
     fn=transcribe,
     inputs=[
         gr.File(type="filepath", label="上传音频文件（可多选）", file_types=["audio"], file_count="multiple"),
-        gr.Dropdown(MODELS, value="ggml-base.en.bin", label="选择模型"),
-        gr.Radio(["txt", "srt", "vtt"], value="txt", label="输出格式")
+        gr.Dropdown(MODELS, value=MODELS[0], label="选择模型"),
+        gr.Radio(["txt", "srt", "vtt"], value="txt", label="输出格式"),
+        gr.Textbox(value="en", label="语言代码 (如 en, zh, ja, fr)")
     ],
     outputs="text",
     title="Whisper.cpp WebUI",
-    description="上传音频，选择模型和输出格式，生成转录或字幕（支持批量处理）"
+    description="上传音频，自动转码为16kHz WAV，只加载 ggml 模型，选择语言，生成转录或字幕（支持批量处理）"
 )
 
 iface.launch(server_name="0.0.0.0", server_port=7860)
+
+
+
 ```
 
 运行 WebUI：
