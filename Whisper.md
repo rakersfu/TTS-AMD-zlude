@@ -14,7 +14,9 @@
 在 Windows + AMD 显卡下没有原生 ROCm 版 PyTorch。推荐安装 CUDA 版 PyTorch（如 cu118），然后使用 ZLUDA 替换 CUDA DLL。示例安装命令：
 
 ```bat
-pip install torch==2.7.0+cu118 torchvision==0.22.0+cu118 torchaudio==2.7.0+cu118 -f https://download.pytorch.org/whl/cu118
+pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu118
+#出现问题后重新执行
+pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu118 --force-reinstall
 ```
 
 ---
