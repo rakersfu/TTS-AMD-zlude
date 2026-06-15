@@ -230,5 +230,6 @@ http://127.0.0.1:7860
 - 编译 whisper.cpp（启用 Vulkan）得到 `whisper-cli.exe`。
 - 下载所需 ggml 模型到 `models` 目录。
 - 可通过命令行或上面的 Gradio WebUI 进行转录与字幕生成。
+- 运行 WebUI，支持自动转码、多语音、批量处理，结果保存到 outputs
 
-如需我把 WebUI 改为直接使用本仓库相对路径、支持更多 whisper-cli 参数或打包成 EXE/服务，我可以继续修改。
+
